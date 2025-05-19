@@ -1,141 +1,138 @@
 import pymysql
-from datetime import datetime
 
-# Connect to the database
-def get_db_connection():
-    connection = pymysql.connect(
-        host="localhost",
-        user="root",
-        password="root123",
-        database="library_db",
-        cursorclass=pymysql.cursors.DictCursor  
-    )
-    return connection
 
-# Add a new book to the library
-def add_book():
-    title = input("Enter book title: ")
-    author = input("Enter author name: ")
-    year = int(input("Enter year of publication: "))
-    genre = input("Enter genre: ")
-
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            INSERT INTO books (title, author, year, genre)
-            VALUES (%s, %s, %s, %s)
-        """, (title, author, year, genre))
-        connection.commit()
-    connection.close()
-    print("Book added successfully!")
-
-# View all books in the library
-def view_books():
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM books")
-        books = cursor.fetchall()
-
-    connection.close()
-
-    if not books:
-        print("\nNo books available in the library.")
-        return
-
-    print("\nAll Books:")
-    for book in books:
-        print(f"ID: {book['id']} | Title: {book['title']} | Author: {book['author']} | Year: {book['year']} | Genre: {book['genre']}")
-
-# Search a book by title or author
-def search_book():
-    search_term = input("Enter title or author to search: ")
+class LibraryManagementSystem:
+    def __init__(self):
+        self.connection = None
+        self.cursor = None
     
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT * FROM books WHERE title LIKE %s OR author LIKE %s
-        """, ('%' + search_term + '%', '%' + search_term + '%'))
-        books = cursor.fetchall()
-
-    if books:
-        print("\nSearch Results:")
-        for book in books:
-            print(f"ID: {book['id']} | Title: {book['title']} | Author: {book['author']} | Year: {book['year']} | Genre: {book['genre']}")
-    else:
-        print("No books found.")
+    def create_connection(self):
+        self.connection = pymysql.connect(
+            host="localhost",
+            user="root",
+            password="root",
+            database="library_db",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        self.cursor = self.connection.cursor()
+        print("Database connected successfully!")
     
-    connection.close()
+    def add_book(self):
+        try:
+            title = input("Enter book title: ")
+            author = input("Enter author name: ")
+            year = int(input("Enter year of publication: "))
+            genre = input("Enter genre: ")
 
-# Update book details
-def update_book():
-    book_id = int(input("Enter book ID to update: "))
-    
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM books WHERE id=%s", (book_id,))
-        book = cursor.fetchone()
+            query = "INSERT INTO books (title, author, year, genre) VALUES (%s, %s, %s, %s)"
+            self.cursor.execute(query, (title, author, year, genre))
+            self.connection.commit()
+            print("Book added successfully!")
+        except Exception as e:
+            self.connection.rollback()
+            print("Error occurred while adding book:", e)
 
-        if book:
-            print(f"Current title: {book['title']}")
-            title = input("Enter new title: ") or book['title']
-            print(f"Current author: {book['author']}")
-            author = input("Enter new author: ") or book['author']
-            print(f"Current year: {book['year']}")
-            year = input("Enter new year: ") or book['year']
-            print(f"Current genre: {book['genre']}")
-            genre = input("Enter new genre: ") or book['genre']
+    def view_books(self):
+        try:
+            query = "SELECT * FROM books"
+            self.cursor.execute(query)
+            books = self.cursor.fetchall()
 
-            cursor.execute("""
-                UPDATE books SET title=%s, author=%s, year=%s, genre=%s WHERE id=%s
-            """, (title, author, year, genre, book_id))
-            connection.commit()
-            print("Book updated successfully!")
-        else:
-            print("Book not found.")
-    
-    connection.close()
+            if not books:
+                print("\nNo books available in the library.")
+                return
 
-# Delete a book
-def delete_book():
-    book_id = int(input("Enter book ID to delete: "))
-    
-    connection = get_db_connection()
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM books WHERE id=%s", (book_id,))
-        connection.commit()
-        print("Book deleted successfully!")
+            print("\nAll Books:")
+            for book in books:
+                print(f"ID: {book['id']} | Title: {book['title']} | Author: {book['author']} | Year: {book['year']} | Genre: {book['genre']}")
+        except Exception as e:
+            print("Error fetching books:", e)
 
-    connection.close()
+    def search_book(self):
+        try:
+            search_term = input("Enter title or author to search: ")
+            query = "SELECT * FROM books WHERE title LIKE %s OR author LIKE %s"
+            self.cursor.execute(query, ('%' + search_term + '%', '%' + search_term + '%'))
+            books = self.cursor.fetchall()
 
-# Display the main menu
-def show_menu():
-    while True:
-        print("\n===== Library Management System =====")
-        print("1. Add Book")
-        print("2. View All Books")
-        print("3. Search Book")
-        print("4. Update Book")
-        print("5. Delete Book")
-        print("6. Exit")
-        
-        choice = input("Enter choice (1-6): ")
+            if books:
+                print("\nSearch Results:")
+                for book in books:
+                    print(f"ID: {book['id']} | Title: {book['title']} | Author: {book['author']} | Year: {book['year']} | Genre: {book['genre']}")
+            else:
+                print("No books found.")
+        except Exception as e:
+            print("Error occurred while searching:", e)
 
-        if choice == '1':
-            add_book()
-        elif choice == '2':
-            view_books()
-        elif choice == '3':
-            search_book()
-        elif choice == '4':
-            update_book()
-        elif choice == '5':
-            delete_book()
-        elif choice == '6':
-            print("Exiting the program...")
-            break
-        else:
-            print("Invalid choice. Please try again.")
+    def update_book(self):
+        try:
+            book_id = int(input("Enter book ID to update: "))
+            self.cursor.execute("SELECT * FROM books WHERE id=%s", (book_id,))
+            book = self.cursor.fetchone()
 
-# Run the program
+            if book:
+                print(f"Current title: {book['title']}")
+                title = input("Enter new title: ") or book['title']
+                print(f"Current author: {book['author']}")
+                author = input("Enter new author: ") or book['author']
+                print(f"Current year: {book['year']}")
+                year = input("Enter new year: ") or book['year']
+                print(f"Current genre: {book['genre']}")
+                genre = input("Enter new genre: ") or book['genre']
+
+                query = "UPDATE books SET title=%s, author=%s, year=%s, genre=%s WHERE id=%s"
+                self.cursor.execute(query, (title, author, year, genre, book_id))
+                self.connection.commit()
+                print("Book updated successfully!")
+            else:
+                print("Book not found.")
+        except Exception as e:
+            print("Error occurred while updating:", e)
+
+    def delete_book(self):
+        try:
+            book_id = int(input("Enter book ID to delete: "))
+            query = "DELETE FROM books WHERE id=%s"
+            self.cursor.execute(query, (book_id,))
+            self.connection.commit()
+            print("Book deleted successfully!")
+        except Exception as e:
+            print("Error occurred while deleting book:", e)
+
+    def run(self):
+        while True:
+            try:
+                print('''\n===== Library Management System =====
+1. Add Book
+2. View All Books
+3. Search Book
+4. Update Book
+5. Delete Book
+6. Exit
+''')
+                choice = input("Enter choice (1-6): ")
+
+                if choice == '1':
+                    self.add_book()
+                elif choice == '2':
+                    self.view_books()
+                elif choice == '3':
+                    self.search_book()
+                elif choice == '4':
+                    self.update_book()
+                elif choice == '5':
+                    self.delete_book()
+                elif choice == '6':
+                    print("Exiting the program...")
+                    break
+                else:
+                    print("Invalid choice. Please try again.")
+
+            except Exception as e:
+                print("An error occurred:", e)
+
+
 if __name__ == "__main__":
-    show_menu()
+    system = LibraryManagementSystem()
+    system.create_connection()
+    system.run()
