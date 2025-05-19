@@ -14,7 +14,7 @@ Before running the program, make sure to have the following installed:
 
 Python 3.x
 
-MySQL (or MariaDB)
+MySQL 
 
 pymysql library (for MySQL database connection)
 
